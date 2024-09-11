@@ -1,8 +1,71 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@using Microsoft.AspNetCore.Identity
+@using RouteGenerator.Areas.Identity.Data
+@inject SignInManager<User> SignInManager
+@inject UserManager<User> UserManager
+
+@{
+    string apiKey = ConfigSaves.GoogleMapsSecret;
+    ViewData["Title"] = "Map Generator - Home Page";
+    var isLoggedIn = SignInManager.IsSignedIn(User);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@if (isLoggedIn)
+{
+    <div class="text-center">
+        <h1 class="display-4">Welcome, @User.Identity.Name!</h1>
+        <p class="lead">Explore your personalized map routes and manage your hotspots.</p>
+        
+        <div id="map" style="height: 500px; width: 100%; margin-top: 20px;"></div>
+        <button class="btn btn-primary btn-lg mt-3" onclick="generateRandomRoute()">Generate Random Route</button>
+        
+        <div id="routeInfo" class="mt-3">
+            <h3>Your Preferred Route Length: <span id="preferredRouteLength"></span> km</h3>
+            <p>Click the button above to generate a new random route based on your preferences.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center">
+        <h1 class="display-4">Welcome to the Map Generator</h1>
+        <p class="lead">Sign up or log in to access your personalized routes and hotspots.</p>
+        <a href="/Identity/Account/Login" class="btn btn-primary btn-lg mt-3">Login</a>
+        <a href="/Identity/Account/Register" class="btn btn-secondary btn-lg mt-3">Register</a>
+    </div>
+}
+
+@section Scripts {
+    <!-- Google Maps API (use your API key) -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=apiKey&callback=initMap"></script>
+    
+    <script>
+        // Simulate preferred route length (you would fetch this from the database in a real scenario)
+        const preferredRouteLength = 5.0; // Fetch from user data on the backend
+
+        // Function to initialise Google Maps
+        function initMap() {
+            const userHomeLocation = { lat: 53.4289, lng: -1.3240 }; // Replace with user home location from backend
+
+            // Create the map centered on the user's home location
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: userHomeLocation
+            });
+
+            // Add a marker for the user's home location
+            const homeMarker = new google.maps.Marker({
+                position: userHomeLocation,
+                map: map,
+                title: "Your Home Location"
+            });
+        }
+
+        // Function to generate a random route (you can integrate route generation logic here)
+        function generateRandomRoute() {
+            alert('Random route generated based on your preferred route length of ' + preferredRouteLength + ' km!');
+        }
+
+        // Update route length in the UI
+        document.getElementById('preferredRouteLength').textContent = preferredRouteLength;
+    </script>
+}

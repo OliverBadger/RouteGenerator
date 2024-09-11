@@ -20,14 +20,31 @@ public class DBContext : IdentityDbContext<User>
     {
         base.OnModelCreating(builder);
 
-        // Apply custom configurations for ApplicationUser
+        // Apply custom configurations for User
         builder.ApplyConfiguration(new ApplicationUserEntityConfiguration());
 
-        // Custom relationships
-        builder.Entity<Hotspot>()
-            .HasOne(h => h.User)
-            .WithMany(u => u.Hotspots)
-            .HasForeignKey(h => h.ApplicationUserId);
+        // Foreign Key Relationships
+
+        //// Relationship between User and Location (HomeLocation)
+        //builder.Entity<User>()
+        //    .HasOne(u => u.HomeLocation)
+        //    .WithMany(l => l.Users)  // A location can be home to many users
+        //    .HasForeignKey(u => u.HomeLocationId)
+        //    .OnDelete(DeleteBehavior.Restrict);  // No cascade delete on home location
+
+        //// Relationship between Hotspot and Location
+        //builder.Entity<Hotspot>()
+        //    .HasOne(h => h.Location)
+        //    .WithMany(l => l.Hotspots)  // A location can have many hotspots
+        //    .HasForeignKey(h => h.LocationId)
+        //    .OnDelete(DeleteBehavior.Cascade);  // Cascade delete allowed
+
+        //// Relationship between Hotspot and User (ApplicationUser)
+        //builder.Entity<Hotspot>()
+        //    .HasOne(h => h.User)
+        //    .WithMany(u => u.Hotspots)  // A user can have many hotspots
+        //    .HasForeignKey(h => h.ApplicationUserId)
+        //    .OnDelete(DeleteBehavior.Cascade);  // Cascade delete allowed
     }
 }
 
