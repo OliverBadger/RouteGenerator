@@ -60,20 +60,23 @@ function addHotspot(location) {
 
 // Generates a circular route and adjusts based on nearby hotspots
 function generateRandomRoute(circumferenceInKm) {
-    //const radius = (circumferenceInKm * 1000) / 2; // Calculate radius from diameter
-    const radius = (circumferenceInKm * 1000) / (2 * Math.PI); // Calculate radius from circumference
-    const waypoints = generateCircularWaypoints(startLocation, radius);
+    const radius = ((circumferenceInKm * 1000) / (2 * Math.PI))/2; // Calculate radius from circumference
+    const waypoints = generateCircularWaypoints(startLocation, radius, circumferenceInKm);
 
     const directionsService = new google.maps.DirectionsService();
 
+    // Ensure origin and destination are in LatLngLiteral format
+    const origin = { lat: waypoints[0].lat, lng: waypoints[0].lng };
+    const destination = { lat: waypoints[0].lat, lng: waypoints[0].lng };
+
     const request = {
-        origin: waypoints[0],
-        destination: waypoints[0],
+        origin: origin, // Pass the first waypoint as the origin
+        destination: destination, // Loop back to the first waypoint as the destination
         waypoints: waypoints.slice(1).map(waypoint => ({
-            location: waypoint,
+            location: { lat: waypoint.lat, lng: waypoint.lng }, // Ensure waypoints are LatLngLiteral
             stopover: true
         })),
-        optimizeWaypoints: false,
+        optimizeWaypoints: false, // Ensure the route follows the order of waypoints
         travelMode: google.maps.TravelMode.WALKING
     };
 
@@ -81,9 +84,9 @@ function generateRandomRoute(circumferenceInKm) {
         if (status === google.maps.DirectionsStatus.OK) {
             directionsRenderer.setDirections(result);
 
-            // Placing custom markers and showing total distance
-            placeCustomMarkers(result); // Place custom markers for origin, destination, and waypoints
-            showTotalDistance(result);  // Show the total distance of the route
+            // Place custom markers and show total distance
+            placeCustomMarkers(result);
+            showTotalDistance(result);
         } else {
             console.error('Directions request failed due to ' + status);
         }
@@ -153,50 +156,114 @@ function placeCustomMarkers(result) {
     });
 }
 
+//// Generate circular waypoints adjusted by nearby hotspots
+//function generateCircularWaypoints(center, radius, circumferenceInKm) {
+//    let waypoints = [];
+//    const numPoints = 8; // Number of waypoints for the circle
+//    const influenceRadius = 1000; // Hotspot influence radius (in meters)
+//    const minDistance = (circumferenceInKm * 1000) - 2000; // Minimum acceptable total distance
+//    const maxDistance = (circumferenceInKm * 1000) + 2000; // Maximum acceptable total distance
+//    let totalDistance = 0;
+
+//    // Loop until the total distance is within the acceptable range
+//    while (totalDistance < minDistance || totalDistance > maxDistance) {
+//        waypoints = []; // Clear previous waypoints
+//        totalDistance = 0; // Reset total distance
+
+//        let startingAngle = Math.floor(Math.random() * 360); // Random start angle
+//        const angleStep = 360 / numPoints; // Equal division of the circle for waypoints
+
+//        // Generate waypoints in a consistent (clockwise) order
+//        for (let i = 0; i < numPoints; i++) {
+//            const angle = (startingAngle + i * angleStep) % 360; // Ensures a circular path
+//            let waypoint = calculateWaypoint(center, radius, angle);
+
+//            // Find the closest hotspot to the current waypoint
+//            let closestHotspot = findClosestHotspot(waypoint);
+
+//            // Adjust the waypoint if it is within the influence radius of a hotspot
+//            let isInfluenced = false;
+//            if (closestHotspot) {
+//                const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
+//                if (distanceToHotspot < influenceRadius) {
+//                    waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+//                    isInfluenced = true;
+//                }
+//            }
+
+//            // Visual indicator: Hotspot-influenced waypoints are in orange
+//            const markerContent = document.createElement('div');
+//            markerContent.style.fontSize = '20px';
+//            if (isInfluenced) {
+//                markerContent.textContent = '🔥';
+//                markerContent.style.color = 'orange';
+//            } else {
+//                markerContent.textContent = '⬤';
+//                markerContent.style.color = 'blue';
+//            }
+
+//            const marker = new google.maps.marker.AdvancedMarkerElement({
+//                position: waypoint,
+//                map: map,
+//                content: markerContent
+//            });
+
+//            markers.push(marker); // Track the marker
+//            waypoints.push(waypoint);
+
+//            // Add the distance from the previous waypoint to the current total distance
+//            if (i > 0) {
+//                totalDistance += calculateDistance(waypoints[i - 1], waypoint);
+//            }
+//        }
+
+//        // Add the distance from the last waypoint back to the first one
+//        totalDistance += calculateDistance(waypoints[waypoints.length - 1], waypoints[0]);
+//    }
+
+//    return waypoints;
+//}
+
 // Generate circular waypoints adjusted by nearby hotspots
 function generateCircularWaypoints(center, radius) {
     const waypoints = [];
     const numPoints = 8; // Number of waypoints for the circle
     const influenceRadius = 1000; // Hotspot influence radius (in meters)
-
-    let startingAngle = Math.floor(Math.random() * 360) + 1;
-
-    center = calculateWaypoint(center, radius, startingAngle);
+    
+    // Start with an initial angle of 0 and increment clockwise (angleStep) for each waypoint
+    const angleStep = 360 / numPoints; // Divide the circle into equal parts (in degrees)
+    let startingAngle = 0; // Start at 0 degrees for the first waypoint
 
     for (let i = 0; i < numPoints; i++) {
-        let waypoint;
-        let markerContent = document.createElement('div');
-        markerContent.style.fontSize = '14px';
+        const angle = (startingAngle + i * angleStep) % 360; // Clockwise increment angle
+        let waypoint = calculateWaypoint(center, radius, angle);
 
-        if (i == 0) {
-            waypoint = calculateWaypoint(center, radius, startingAngle);
-        } else {
-            const incriment = (i * 360) / numPoints; // Divide the circle into equal parts
-            if (startingAngle > 360) { startingAngle -= (360 + incriment); }
-            else { startingAngle += incriment }
-            waypoint = calculateWaypoint(center, radius, startingAngle);
+        // Find the closest hotspot to the current waypoint
+        let closestHotspot = findClosestHotspot(waypoint);
 
-            // Find the closest hotspot to the current waypoint
-            let closestHotspot = findClosestHotspot(waypoint);
-
-            // Adjust the waypoint if it is within the influence radius of a hotspot
-            if (closestHotspot) {
-                const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
-                if (distanceToHotspot < influenceRadius) {
-                    waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
-
-                    // Visual indicator: Hotspot-influenced waypoints in green
-                    markerContent.textContent = 'Influenced Waypoint';
-                    markerContent.style.color = 'green';
-                } else {
-                    // Standard waypoint (not influenced)
-                    markerContent.textContent = 'Waypoint';
-                    markerContent.style.color = 'blue';
-                }
+        // Adjust the waypoint if it is within the influence radius of a hotspot
+        let isInfluenced = false;
+        if (closestHotspot) {
+            const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
+            if (distanceToHotspot < influenceRadius) {
+                waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+                isInfluenced = true;
             }
         }
 
-        // Create markers for waypoints and track them
+        // Visual marker content for the waypoints
+        const markerContent = document.createElement('div');
+        markerContent.style.fontSize = '14px';
+
+        if (isInfluenced) {
+            markerContent.textContent = 'Influenced Waypoint';
+            markerContent.style.color = 'green'; // Influenced waypoints in green
+        } else {
+            markerContent.textContent = 'Waypoint';
+            markerContent.style.color = 'blue'; // Standard waypoints in blue
+        }
+
+        // Create a marker for the waypoint and track it
         const marker = new google.maps.marker.AdvancedMarkerElement({
             position: waypoint,
             map: map,
