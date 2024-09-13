@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using RouteGenerator.Areas.Identity.Data;
 using RouteGenerator.Controllers;
@@ -42,5 +43,16 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages();
+
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    ContentTypeProvider = new FileExtensionContentTypeProvider
+//    {
+//        Mappings =
+//        {
+//            [".mp4"] = "video/mp4"
+//        }
+//    }
+//});
 
 app.Run();
