@@ -60,14 +60,15 @@ function addHotspot(location) {
 
 function generateRandomRoute(targetDistanceKm) {
     const directionsService = new google.maps.DirectionsService();
-    let currentRadius = ((targetDistanceKm * 1000) / (2 * Math.PI)) / 1.2; // Calculate initial radius
+    let divisor = 1.1; // Start divisor
+    let currentRadius = ((targetDistanceKm * 1000) / (2 * Math.PI)) / divisor; // Calculate initial radius
     let maxIterations = 100;
     let iteration = 0;
 
     // Loop until a valid route is found within bounds
     const findValidRoute = () => {
         iteration++;
-        console.log(`Iteration ${iteration}: Generating route with radius ${currentRadius} meters`);
+        console.log(`Iteration ${iteration}: Generating route with radius ${currentRadius} meters and divisor ${divisor}`);
 
         const waypoints = generateCircularWaypoints(startLocation, currentRadius);
 
@@ -93,8 +94,15 @@ function generateRandomRoute(targetDistanceKm) {
                     directionsRenderer.setDirections(result);
                     showTotalDistance(totalDistance);
                 } else {
-                    // Adjust radius slightly if the distance is out of bounds and retry
-                    currentRadius += (totalDistance < targetDistanceKm) ? 50 : -50;
+                    // Adjust the divisor every 20 attempts
+                    if (iteration % 20 === 0) {
+                        divisor += 0.1;
+                        console.log(`Divisor increased to ${divisor}`);
+                    }
+
+                    // Adjust the radius based on total distance
+                    currentRadius = ((targetDistanceKm * 1000) / (2 * Math.PI)) / divisor;
+
                     findValidRoute(); // Recurse until within bounds
                 }
             } else {

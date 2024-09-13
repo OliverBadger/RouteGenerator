@@ -17,7 +17,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body onload="initMap()">
-    <div class="container">
+    <div class="map-container">
         <!-- The map container -->
         <div id="map"></div>
 
@@ -32,18 +32,13 @@
         <!-- Display total distance -->
         <div id="totalDistance">Total Distance: 0 km</div>
 
-        <!-- Name form -->
+@*         <!-- Name form -->
         <h2>Enter Your Name</h2>
         <form action="@Url.Action("Post", "Map")" method="post">
             <label for="nameInput">Enter your name:</label>
             <input type="text" id="nameInput" name="name" required />
             <input type="submit" value="Submit" />
-        </form>
+        </form> *@
     </div>
-
-    <!-- Footer for the page -->
-    <footer>
-        &copy; 2024 Epic Maps. All rights reserved.
-    </footer>
 </body>
 </html>
