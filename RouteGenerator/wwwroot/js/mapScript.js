@@ -1,4 +1,5 @@
-﻿let map; // Google Maps object
+﻿
+let map; // Google Maps object
 let startLocation = { lat: 53.428900, lng: -1.324000 }; // Initial map center
 const RADIUS_EARTH = 6371000; // Earth radius in meters
 let hotspots = []; // Array to store hotspot locations
@@ -45,9 +46,9 @@ function addHotspot(location) {
     hotspots.push(location);
 
     const markerContent = document.createElement('div');
-    markerContent.textContent = 'Hotspot';
-    markerContent.style.fontSize = '14px';
-    markerContent.style.color = 'red'; // Set hotspot markers to red
+    markerContent.innerHTML = '🔥'; // Fire emoji
+    markerContent.style.fontSize = '32px';
+    markerContent.style.color = 'red'; // Red circular marker
 
     const marker = new google.maps.marker.AdvancedMarkerElement({
         position: location,
@@ -60,7 +61,7 @@ function addHotspot(location) {
 
 // Generates a circular route and adjusts based on nearby hotspots
 function generateRandomRoute(circumferenceInKm) {
-    const radius = ((circumferenceInKm * 1000) / (2 * Math.PI))/2; // Calculate radius from circumference
+    const radius = ((circumferenceInKm * 1000) / (2 * Math.PI)); // Calculate radius from circumference
     const waypoints = generateCircularWaypoints(startLocation, radius, circumferenceInKm);
 
     const directionsService = new google.maps.DirectionsService();
@@ -141,18 +142,19 @@ function placeCustomMarkers(result) {
     });
     markers.push(destinationMarker); // Track the marker
 
-    // Create custom markers for each waypoint
+    // Create custom markers for each destination
     route.waypoint_order.forEach((waypointIndex) => {
         const waypoint = leg.via_waypoints[waypointIndex];
         const waypointMarkerContent = document.createElement('div');
-        waypointMarkerContent.innerHTML = `<div class="custom-marker">${String.fromCharCode(67 + waypointIndex)}</div>`; // C, D, E, etc.
+        waypointMarkerContent.innerHTML = `<div class="custom-marker">${String.fromCharCode(67 + waypointIndex)}</div>`;
+        waypointMarkerContent.style.color = 'blue'; // Waypoints in blue
 
         const waypointMarker = new google.maps.marker.AdvancedMarkerElement({
             position: waypoint,
             map: map,
             content: waypointMarkerContent
         });
-        markers.push(waypointMarker); // Track the marker
+        markers.push(waypointMarker);
     });
 }
 
@@ -228,15 +230,16 @@ function placeCustomMarkers(result) {
 function generateCircularWaypoints(center, radius) {
     const waypoints = [];
     const numPoints = 8; // Number of waypoints for the circle
-    const influenceRadius = 1000; // Hotspot influence radius (in meters)
+    const influenceRadius = 2000; // Hotspot influence radius (in meters)
     
     // Start with an initial angle of 0 and increment clockwise (angleStep) for each waypoint
     const angleStep = 360 / numPoints; // Divide the circle into equal parts (in degrees)
-    let startingAngle = 0; // Start at 0 degrees for the first waypoint
+    let startingAngle = Math.floor(Math.random() * 360) + 1;
+    let home = calculateWaypoint(center, radius, startingAngle);
 
     for (let i = 0; i < numPoints; i++) {
         const angle = (startingAngle + i * angleStep) % 360; // Clockwise increment angle
-        let waypoint = calculateWaypoint(center, radius, angle);
+        let waypoint = calculateWaypoint(home, radius, angle);
 
         // Find the closest hotspot to the current waypoint
         let closestHotspot = findClosestHotspot(waypoint);
@@ -253,14 +256,14 @@ function generateCircularWaypoints(center, radius) {
 
         // Visual marker content for the waypoints
         const markerContent = document.createElement('div');
-        markerContent.style.fontSize = '14px';
+        markerContent.style.fontSize = '8px';
 
         if (isInfluenced) {
-            markerContent.textContent = 'Influenced Waypoint';
-            markerContent.style.color = 'green'; // Influenced waypoints in green
+            markerContent.textContent = '🔥';
+            markerContent.style.color = 'orange';
         } else {
-            markerContent.textContent = 'Waypoint';
-            markerContent.style.color = 'blue'; // Standard waypoints in blue
+            markerContent.textContent = '⬤';
+            markerContent.style.color = 'blue';
         }
 
         // Create a marker for the waypoint and track it
@@ -297,7 +300,7 @@ function findClosestHotspot(waypoint) {
 
 // Adjust the waypoint to move it halfway towards the closest hotspot
 function adjustWaypointTowardsHotspot(waypoint, hotspot, distanceToHotspot, influenceRadius) {
-    const factor = 0.5; // Move the waypoint halfway to the hotspot
+    const factor = 0.2; // Move the waypoint halfway to the hotspot
     const latDelta = (hotspot.lat() - waypoint.lat) * factor;
     const lngDelta = (hotspot.lng() - waypoint.lng) * factor;
 
