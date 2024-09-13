@@ -88,7 +88,7 @@ function generateRandomRoute(targetDistanceKm) {
 
                 console.log(`Iteration ${iteration}: Total distance: ${totalDistance} km`);
 
-                if (Math.abs(totalDistance - targetDistanceKm) <= 0.2 || iteration >= maxIterations) {
+                if (Math.abs(totalDistance - targetDistanceKm) <= 0.02 || iteration >= maxIterations) {
                     console.log(`Valid route found within bounds on iteration ${iteration}: ${totalDistance} km`);
                     directionsRenderer.setDirections(result);
                     showTotalDistance(totalDistance);
