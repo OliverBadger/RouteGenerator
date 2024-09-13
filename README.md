@@ -34,8 +34,9 @@
 
 ## Installation
 
-1. Clone the repository
+Clone the repository
     ```bash
+
     git clone https://github.com/OliverBadger/RouteGenerator.git
 Navigate to the project directory
 
