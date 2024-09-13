@@ -1,5 +1,4 @@
-﻿
-let map; // Google Maps object
+﻿let map; // Google Maps object
 let startLocation = { lat: 53.428900, lng: -1.324000 }; // Initial map center
 const RADIUS_EARTH = 6371000; // Earth radius in meters
 let hotspots = []; // Array to store hotspot locations
@@ -59,179 +58,79 @@ function addHotspot(location) {
     markers.push(marker); // Track the marker
 }
 
-// Generates a circular route and adjusts based on nearby hotspots
-function generateRandomRoute(circumferenceInKm) {
-    const radius = ((circumferenceInKm * 1000) / (2 * Math.PI)); // Calculate radius from circumference
-    const waypoints = generateCircularWaypoints(startLocation, radius, circumferenceInKm);
-
+function generateRandomRoute(targetDistanceKm) {
     const directionsService = new google.maps.DirectionsService();
+    let currentRadius = ((targetDistanceKm * 1000) / (2 * Math.PI)) / 1.2; // Calculate initial radius
+    let maxIterations = 100;
+    let iteration = 0;
 
-    // Ensure origin and destination are in LatLngLiteral format
-    const origin = { lat: waypoints[0].lat, lng: waypoints[0].lng };
-    const destination = { lat: waypoints[0].lat, lng: waypoints[0].lng };
+    // Loop until a valid route is found within bounds
+    const findValidRoute = () => {
+        iteration++;
+        console.log(`Iteration ${iteration}: Generating route with radius ${currentRadius} meters`);
 
-    const request = {
-        origin: origin, // Pass the first waypoint as the origin
-        destination: destination, // Loop back to the first waypoint as the destination
-        waypoints: waypoints.slice(1).map(waypoint => ({
-            location: { lat: waypoint.lat, lng: waypoint.lng }, // Ensure waypoints are LatLngLiteral
-            stopover: true
-        })),
-        optimizeWaypoints: false, // Ensure the route follows the order of waypoints
-        travelMode: google.maps.TravelMode.WALKING
+        const waypoints = generateCircularWaypoints(startLocation, currentRadius);
+
+        const request = {
+            origin: waypoints[0],
+            destination: waypoints[0],
+            waypoints: waypoints.slice(1).map(waypoint => ({
+                location: waypoint,
+                stopover: true
+            })),
+            optimizeWaypoints: false,
+            travelMode: google.maps.TravelMode.WALKING
+        };
+
+        directionsService.route(request, function (result, status) {
+            if (status === google.maps.DirectionsStatus.OK) {
+                let totalDistance = calculateTotalDistance(result.routes[0].legs);
+
+                console.log(`Iteration ${iteration}: Total distance: ${totalDistance} km`);
+
+                if (Math.abs(totalDistance - targetDistanceKm) <= 0.2 || iteration >= maxIterations) {
+                    console.log(`Valid route found within bounds on iteration ${iteration}: ${totalDistance} km`);
+                    directionsRenderer.setDirections(result);
+                    showTotalDistance(totalDistance);
+                } else {
+                    // Adjust radius slightly if the distance is out of bounds and retry
+                    currentRadius += (totalDistance < targetDistanceKm) ? 50 : -50;
+                    findValidRoute(); // Recurse until within bounds
+                }
+            } else {
+                console.error('Directions request failed due to ' + status);
+            }
+        });
     };
 
-    directionsService.route(request, function (result, status) {
-        if (status === google.maps.DirectionsStatus.OK) {
-            directionsRenderer.setDirections(result);
-
-            // Place custom markers and show total distance
-            placeCustomMarkers(result);
-            showTotalDistance(result);
-        } else {
-            console.error('Directions request failed due to ' + status);
-        }
-    });
+    findValidRoute(); // Start the loop
 }
 
-// Display the total distance of the route in the HTML or on the map
-function showTotalDistance(result) {
-    let totalDistance = 0;
-    const legs = result.routes[0].legs;
-
-    // Calculate total distance by summing the distance of each leg
-    legs.forEach(leg => {
-        totalDistance += leg.distance.value; // distance in meters
-    });
-
-    totalDistance = (totalDistance / 1000).toFixed(2); // Convert meters to kilometers and round to 2 decimal places
-
-    // Update the HTML element with the total distance
+// Display the total distance of the route in kilometers
+function showTotalDistance(totalDistance) {
+    totalDistance = totalDistance.toFixed(2);
     document.getElementById('totalDistance').innerHTML = `Total Distance: ${totalDistance} km`;
 
-    // Optionally, show distance on the map using an info window
     distanceInfoWindow.setContent(`Total Distance: ${totalDistance} km`);
     distanceInfoWindow.setPosition(startLocation);
     distanceInfoWindow.open(map);
 }
 
-// Place custom markers for origin, destination, and waypoints
-function placeCustomMarkers(result) {
-    const route = result.routes[0];
-    const leg = route.legs[0];
-
-    // Create custom marker for the origin
-    const originMarkerContent = document.createElement('div');
-    originMarkerContent.innerHTML = '<div class="custom-marker">A</div>'; // Custom HTML content
-
-    const originMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: leg.start_location,
-        map: map,
-        content: originMarkerContent
+// Calculate total distance from all legs of the route
+function calculateTotalDistance(legs) {
+    let totalDistance = 0;
+    legs.forEach(leg => {
+        totalDistance += leg.distance.value; // meters
     });
-    markers.push(originMarker); // Track the marker
-
-    // Create custom marker for the destination
-    const destinationMarkerContent = document.createElement('div');
-    destinationMarkerContent.innerHTML = '<div class="custom-marker">B</div>';
-
-    const destinationMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: leg.end_location,
-        map: map,
-        content: destinationMarkerContent
-    });
-    markers.push(destinationMarker); // Track the marker
-
-    // Create custom markers for each destination
-    route.waypoint_order.forEach((waypointIndex) => {
-        const waypoint = leg.via_waypoints[waypointIndex];
-        const waypointMarkerContent = document.createElement('div');
-        waypointMarkerContent.innerHTML = `<div class="custom-marker">${String.fromCharCode(67 + waypointIndex)}</div>`;
-        waypointMarkerContent.style.color = 'blue'; // Waypoints in blue
-
-        const waypointMarker = new google.maps.marker.AdvancedMarkerElement({
-            position: waypoint,
-            map: map,
-            content: waypointMarkerContent
-        });
-        markers.push(waypointMarker);
-    });
+    return totalDistance / 1000; // Convert meters to kilometers
 }
-
-//// Generate circular waypoints adjusted by nearby hotspots
-//function generateCircularWaypoints(center, radius, circumferenceInKm) {
-//    let waypoints = [];
-//    const numPoints = 8; // Number of waypoints for the circle
-//    const influenceRadius = 1000; // Hotspot influence radius (in meters)
-//    const minDistance = (circumferenceInKm * 1000) - 2000; // Minimum acceptable total distance
-//    const maxDistance = (circumferenceInKm * 1000) + 2000; // Maximum acceptable total distance
-//    let totalDistance = 0;
-
-//    // Loop until the total distance is within the acceptable range
-//    while (totalDistance < minDistance || totalDistance > maxDistance) {
-//        waypoints = []; // Clear previous waypoints
-//        totalDistance = 0; // Reset total distance
-
-//        let startingAngle = Math.floor(Math.random() * 360); // Random start angle
-//        const angleStep = 360 / numPoints; // Equal division of the circle for waypoints
-
-//        // Generate waypoints in a consistent (clockwise) order
-//        for (let i = 0; i < numPoints; i++) {
-//            const angle = (startingAngle + i * angleStep) % 360; // Ensures a circular path
-//            let waypoint = calculateWaypoint(center, radius, angle);
-
-//            // Find the closest hotspot to the current waypoint
-//            let closestHotspot = findClosestHotspot(waypoint);
-
-//            // Adjust the waypoint if it is within the influence radius of a hotspot
-//            let isInfluenced = false;
-//            if (closestHotspot) {
-//                const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
-//                if (distanceToHotspot < influenceRadius) {
-//                    waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
-//                    isInfluenced = true;
-//                }
-//            }
-
-//            // Visual indicator: Hotspot-influenced waypoints are in orange
-//            const markerContent = document.createElement('div');
-//            markerContent.style.fontSize = '20px';
-//            if (isInfluenced) {
-//                markerContent.textContent = '🔥';
-//                markerContent.style.color = 'orange';
-//            } else {
-//                markerContent.textContent = '⬤';
-//                markerContent.style.color = 'blue';
-//            }
-
-//            const marker = new google.maps.marker.AdvancedMarkerElement({
-//                position: waypoint,
-//                map: map,
-//                content: markerContent
-//            });
-
-//            markers.push(marker); // Track the marker
-//            waypoints.push(waypoint);
-
-//            // Add the distance from the previous waypoint to the current total distance
-//            if (i > 0) {
-//                totalDistance += calculateDistance(waypoints[i - 1], waypoint);
-//            }
-//        }
-
-//        // Add the distance from the last waypoint back to the first one
-//        totalDistance += calculateDistance(waypoints[waypoints.length - 1], waypoints[0]);
-//    }
-
-//    return waypoints;
-//}
 
 // Generate circular waypoints adjusted by nearby hotspots
 function generateCircularWaypoints(center, radius) {
     const waypoints = [];
     const numPoints = 8; // Number of waypoints for the circle
     const influenceRadius = 2000; // Hotspot influence radius (in meters)
-    
+
     // Start with an initial angle of 0 and increment clockwise (angleStep) for each waypoint
     const angleStep = 360 / numPoints; // Divide the circle into equal parts (in degrees)
     let startingAngle = Math.floor(Math.random() * 360) + 1;
