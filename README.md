@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/github/v/release/OliverBadger/RouteGenerator)](https://github.com/OliverBadger/RouteGenerator/releases)
 
 ## Description
-**RouteGenerator** is a web-based application that generates random running and cycling routes based on user-defined preferences. Leveraging the Google Maps API and custom algorithms, RouteGenerator ensures every route is unique and personalized to your fitness goals, helping you avoid the monotony of repetitive routes.
+**RouteGenerator** is a web-based application that generates random running and cycling routes based on user-defined preferences. Leveraging the Google Maps API and custom algorithms, RouteGenerator ensures every route is unique and personalised to your fitness goals, helping you avoid the monotony of repetitive routes.
 
 ## Table of Contents
 - [Features](#features)
@@ -19,8 +19,8 @@
 - Generate random running and cycling routes
 - Support for multiple route preferences (scenic, urban, etc.)
 - Responsive design for mobile and desktop
-- User authentication with customizable dashboards
-- Integration with Google Maps to visualize routes
+- User authentication with customisable dashboards
+- Integration with Google Maps to visualise routes
 - Hotspot and leaderboard functionalities to keep the experience engaging
 
 ## Screenshots
