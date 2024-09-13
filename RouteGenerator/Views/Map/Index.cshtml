@@ -1,0 +1,49 @@
+﻿@page
+@model RouteGenerator.Models.MapModel
+@{
+    // Layout = null; // Use this if you dont want a layout page
+    // var apiKey = "Google API Key";
+    // ViewData["Title"] = "Map";
+    string apiKey = ConfigSaves.GoogleMapsSecret;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap&v=weekly&libraries=marker"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Map</title>
+    <script src="/js/mapScript.js?v=1.0"></script>
+    <link rel="stylesheet" href="~/css/map.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body onload="initMap()">
+    <div class="container">
+        <!-- The map container -->
+        <div id="map"></div>
+
+
+        <!-- Inputs for route generation and form submission -->
+        <div class="input-section">
+            <input type="number" id="distanceInput" placeholder="Enter distance in km" />
+            <button onclick="generateRandomRoute(parseFloat(document.getElementById('distanceInput').value))">Generate Random Circular Route</button>
+            <button onclick="removeAllMarkers()">Remove All Markers</button>
+        </div>
+
+        <!-- Display total distance -->
+        <div id="totalDistance">Total Distance: 0 km</div>
+
+        <!-- Name form -->
+        <h2>Enter Your Name</h2>
+        <form action="@Url.Action("Post", "Map")" method="post">
+            <label for="nameInput">Enter your name:</label>
+            <input type="text" id="nameInput" name="name" required />
+            <input type="submit" value="Submit" />
+        </form>
+    </div>
+
+    <!-- Footer for the page -->
+    <footer>
+        &copy; 2024 Epic Maps. All rights reserved.
+    </footer>
+</body>
+</html>

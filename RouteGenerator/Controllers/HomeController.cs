@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using RouteGenerator.Areas.Identity.Data;
 using RouteGenerator.Models;
 using System.Diagnostics;
 
@@ -6,27 +8,32 @@ namespace RouteGenerator.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly UserManager<User> _userManager;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(UserManager<User> userManager)
         {
-            _logger = logger;
+            _userManager = userManager;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            if (User.Identity.IsAuthenticated)
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                // Pass user data to the view
+                var model = new IndexModel
+                {
+                    FirstName = user.FirstName,
+                    HomeLatitude = user.HomeLocation?.Latitude ?? 0.0, // Default to 0.0 if HomeLocation is null
+                    HomeLongitude = user.HomeLocation?.Longitude ?? 0.0, // Default to 0.0 if HomeLocation is null
+                    PreferredRouteLength = user.PreferredRouteLength > 0 ? user.PreferredRouteLength : 5.0 // Default to 5 km if null or 0
+                };
+
+                return View(model);
+            }
+
             return View();
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

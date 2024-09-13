@@ -10,18 +10,19 @@ namespace RouteGenerator.Areas.Identity.Data;
 // Add profile data for application users by adding properties to the User class
 public class User : IdentityUser
 {
-    /* Anything you are adding in here needs to be added in the DBContext Class */
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
 
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
+    //[Required]
+    //public Guid? HomeLocationId { get; set; }  // Foreign key reference to Location
 
-    [Required]
-    public Location HomeLocation { get; set; }  // Custom location property
+    // Navigation property to Location
+    public Location? HomeLocation { get; set; }
 
-    public double PreferredRouteLength { get; set; }  // Custom preferred route length
+    public double PreferredRouteLength { get; set; }
 
-    // Navigation property for Hotspots
-    public ICollection<Hotspot> Hotspots { get; set; }
+    // Navigation property to Hotspots
+    public ICollection<Hotspot>? Hotspots { get; set; }
 }
 
 public class Hotspot
@@ -29,11 +30,12 @@ public class Hotspot
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public Location Location { get; set; }
+    // Foreign key reference to Location
+    public Guid? LocationId { get; set; }
+    public Location? Location { get; set; }
 
-    // Foreign key to ApplicationUser
-    public string ApplicationUserId { get; set; }
-    public User User { get; set; }
+    // Store User's email instead of ApplicationUserId
+    public string? UserEmail { get; set; }  // Store email to link with User
 }
 
 public class Location
@@ -42,5 +44,11 @@ public class Location
     public Guid Id { get; set; } = Guid.NewGuid();
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+
+    // Users that have this location as HomeLocation
+    public ICollection<User>? Users { get; set; }
+
+    // Hotspots associated with this location
+    public ICollection<Hotspot>? Hotspots { get; set; }
 }
 

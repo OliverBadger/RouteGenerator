@@ -1,16 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
-
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -19,9 +7,17 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using RouteGenerator.Areas.Identity.Data;
+using RouteGenerator.Controllers;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RouteGenerator.Areas.Identity.Pages.Account
 {
+    [AllowAnonymous]
     public class RegisterModel : PageModel
     {
         private readonly SignInManager<User> _signInManager;
@@ -30,13 +26,15 @@ namespace RouteGenerator.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<User> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly CSVHandler _csvService;  // Inject CsvService for CSV handling
 
         public RegisterModel(
             UserManager<User> userManager,
             IUserStore<User> userStore,
             SignInManager<User> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            CSVHandler csvService)  // Add CsvService to constructor
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -44,76 +42,56 @@ namespace RouteGenerator.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _csvService = csvService;  // Initialise CsvService
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public string ReturnUrl { get; set; }
-
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [StringLength(100, ErrorMessage = "Max 100 characters are allowed")]
-            [Display(Name = "FirstName")]
-            public string FirstName { get; set; }
+            [Display(Name = "First Name")]
+            public string? FirstName { get; set; }
 
             [Required]
             [StringLength(100, ErrorMessage = "Max 100 characters are allowed")]
-            [Display(Name = "LastName")]
-            public string LastName { get; set; }
+            [Display(Name = "Last Name")]
+            public string? LastName { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [EmailAddress]
             [Display(Name = "Email")]
-            public string Email { get; set; }
+            public string? Email { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
-            public string Password { get; set; }
+            public string? Password { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [DataType(DataType.Password)]
-            [Display(Name = "Confirm password")]
+            [Display(Name = "Confirm Password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-            public string ConfirmPassword { get; set; }
-        }
+            public string? ConfirmPassword { get; set; }
 
+            // Additional custom fields
+            [Required]
+            [Display(Name = "Home Latitude")]
+            public double HomeLatitude { get; set; }
+
+            [Required]
+            [Display(Name = "Home Longitude")]
+            public double HomeLongitude { get; set; }
+
+            [Required]
+            [Display(Name = "Preferred Route Length")]
+            public double PreferredRouteLength { get; set; }
+        }
 
         public async Task OnGetAsync(string returnUrl = null)
         {
@@ -125,14 +103,22 @@ namespace RouteGenerator.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
 
-                /*Always add here once adding*/
-
+                // Set custom properties for the user
                 user.FirstName = Input.FirstName;
                 user.LastName = Input.LastName;
+                user.PreferredRouteLength = Input.PreferredRouteLength;
+
+                // Set home location based on input
+                user.HomeLocation = new Location
+                {
+                    Latitude = Input.HomeLatitude,
+                    Longitude = Input.HomeLongitude
+                };
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -153,6 +139,17 @@ namespace RouteGenerator.Areas.Identity.Pages.Account
 
                     await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                         $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+                    // After the user is successfully created, save Hotspot and Location to CSV
+                    var hotspot = new Hotspot
+                    {
+                        Location = user.HomeLocation,
+                        UserEmail = user.Email
+                    };
+
+                    // Save to CSV
+                    _csvService.SaveLocationToCsv(user.HomeLocation);
+                    _csvService.SaveHotspotToCsv(hotspot, user.Email);  // Save hotspot linked to user's email
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
@@ -182,9 +179,7 @@ namespace RouteGenerator.Areas.Identity.Pages.Account
             }
             catch
             {
-                throw new InvalidOperationException($"Can't create an instance of '{nameof(User)}'. " +
-                    $"Ensure that '{nameof(User)}' is not an abstract class and has a parameterless constructor, or alternatively " +
-                    $"override the register page in /Areas/Identity/Pages/Account/Register.cshtml");
+                throw new InvalidOperationException($"Can't create an instance of '{nameof(User)}'. Ensure that '{nameof(User)}' is not an abstract class and has a parameterless constructor.");
             }
         }
 

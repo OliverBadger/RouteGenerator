@@ -159,6 +159,47 @@ namespace RouteGenerator.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.Hotspot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Hotspots");
+                });
+
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.Location", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Locations");
+                });
+
             modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.User", b =>
                 {
                     b.Property<string>("Id")
@@ -179,12 +220,13 @@ namespace RouteGenerator.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("FirstName")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("HomeLocationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("LastName")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -211,6 +253,9 @@ namespace RouteGenerator.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<double>("PreferredRouteLength")
+                        .HasColumnType("float");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -222,6 +267,8 @@ namespace RouteGenerator.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("HomeLocationId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -283,6 +330,40 @@ namespace RouteGenerator.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.Hotspot", b =>
+                {
+                    b.HasOne("RouteGenerator.Areas.Identity.Data.Location", "Location")
+                        .WithMany("Hotspots")
+                        .HasForeignKey("LocationId");
+
+                    b.HasOne("RouteGenerator.Areas.Identity.Data.User", null)
+                        .WithMany("Hotspots")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.User", b =>
+                {
+                    b.HasOne("RouteGenerator.Areas.Identity.Data.Location", "HomeLocation")
+                        .WithMany("Users")
+                        .HasForeignKey("HomeLocationId");
+
+                    b.Navigation("HomeLocation");
+                });
+
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.Location", b =>
+                {
+                    b.Navigation("Hotspots");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("RouteGenerator.Areas.Identity.Data.User", b =>
+                {
+                    b.Navigation("Hotspots");
                 });
 #pragma warning restore 612, 618
         }
