@@ -5,6 +5,7 @@ let hotspots = []; // Array to store hotspot locations
 let markers = []; // Array to store all markers
 let directionsRenderer; // Global variable to store the DirectionsRenderer
 let distanceInfoWindow; // Info window to display total distance on the map
+let markersVisible = true; // Flag to track the visibility of markers
 
 function initMap() {
     // Initialise Google Maps
@@ -112,6 +113,18 @@ function generateRandomRoute(targetDistanceKm) {
     };
 
     findValidRoute(); // Start the loop
+}
+
+function toggleMarkers() {
+    markersVisible = !markersVisible; // Toggle the visibility state
+
+    // Iterate through each marker and set its map property based on the visibility state
+    markers.forEach(marker => {
+        marker.map = markersVisible ? map : null;
+    });
+
+    // Update the toggle button text based on the visibility state
+    document.getElementById('toggleMarkersBtn').textContent = markersVisible ? 'Hide Markers' : 'Show Markers';
 }
 
 // Display the total distance of the route in kilometers
